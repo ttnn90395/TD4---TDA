@@ -102,7 +102,7 @@ def main():
     R = reduce_boundary_matrix(B)
     print(R)
     barcodes = extract_barcodes(R, F)
-    print(barcodes)
+    print(barcodez )
     print_barcodes(barcodes, F)
 
 if __name__ == "__main__":
