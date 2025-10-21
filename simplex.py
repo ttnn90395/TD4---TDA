@@ -1,4 +1,5 @@
 import sys
+# Simplex = {time: float, dim: int, vert: set[int]} 
 
 class Simplex:
     def __init__(self, tokens):
