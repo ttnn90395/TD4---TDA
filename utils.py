@@ -1,4 +1,3 @@
-from simplex import Simplex 
 import sys
 
 # Return a sorted by time filtration from a file 
