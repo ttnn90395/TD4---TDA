@@ -1,5 +1,6 @@
 import sys
 import matplotlib.pyplot as plt
+import math
 
 
 # Return a sorted by time filtration from a file
@@ -26,7 +27,125 @@ def read_filtration(filename):
     return filtration
 
 
-def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.00):
+def plot_barcodes(
+    barcodes,
+    name=None,
+    log_scale=False,
+    minimum_length=0.05,
+    figsize=(12, 6),
+    line_width=3,
+):
+    """
+    Display a persistence barcode diagram.
+
+    Parameters:
+    - barcodes: list of tuples (dim, birth, death)
+    - name: optional name for the plot
+    - log_scale: whether to use logarithmic x-axis
+    - minimum_length: minimum length to display a bar
+    """
+
+    # Filter bars shorter than minimum_length
+    filtered_bars = [
+        (dim, birth, death)
+        for dim, birth, death in barcodes
+        if (math.isinf(death) or death - birth >= minimum_length)
+    ]
+
+    if not filtered_bars:
+        # Empty plot
+        fig, ax = plt.subplots(figsize=(8, 3))
+        ax.set_yticks([])
+        ax.set_xticks([])
+        ax.set_title(f"Barcode diagram{' - ' + name if name else ''} (no bars)")
+        plt.show()
+        return
+
+    # Sort bars by dimension and birth time
+    filtered_bars.sort(key=lambda x: (x[0], x[1]))
+
+    # Unique dimensions
+    dims = sorted(set(dim for dim, _, _ in filtered_bars))
+
+    # X-axis limits
+    births = [b for _, b, _ in filtered_bars]
+    deaths = [d for _, _, d in filtered_bars if not math.isinf(d)]
+    x_min = min(births)
+    x_max = max(deaths) if deaths else max(births)
+    margin = max(0.05 * (x_max - x_min), 1.0)
+    x_min -= margin
+    x_max += margin
+
+    if log_scale:
+        x_min = max(x_min, 1e-10)
+        x_max = max(x_max, 1.0)
+
+    # Prepare figure
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Color palette
+    cmap = plt.cm.get_cmap("tab10", len(dims))
+
+    block_height = 1.5
+    total_height = len(dims) * block_height
+
+    for i, dim in enumerate(dims):
+        bars = [(b, d) for d_i, b, d in filtered_bars if d_i == dim]
+        n_bars = len(bars)
+        if n_bars == 0:
+            continue
+
+        y_bottom = total_height - (i + 1) * block_height
+        y_top = y_bottom + block_height
+
+        # Evenly space bars vertically
+        y_positions = [
+            y_bottom + (k + 1) * (block_height / (n_bars + 1)) for k in range(n_bars)
+        ]
+
+        color = cmap(i % cmap.N)
+
+        for (birth, death), y in zip(bars, y_positions):
+            plot_end = x_max if math.isinf(death) else death
+            plot_birth = max(birth, 1e-10) if log_scale and birth <= 0 else birth
+            plot_end = max(plot_end, 1e-10) if log_scale and plot_end <= 0 else plot_end
+            ax.hlines(y, plot_birth, plot_end, color=color, lw=line_width)
+
+        # Label H_k
+        ax.text(
+            x_min - margin * 0.5,
+            (y_bottom + y_top) / 2,
+            f"H{dim}",
+            fontsize=13,
+            va="center",
+            ha="right",
+            fontweight="bold",
+            color=color,
+        )
+
+    # Formatting
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(0, total_height)
+    ax.set_yticks([])
+    ax.set_xlabel("Filtration value", fontsize=12)
+    ax.set_title(f"Barcode diagram{' - ' + name if name else ''}", fontsize=14, pad=15)
+    ax.grid(False)
+
+    if log_scale:
+        ax.set_xscale("log")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_barcodes2(
+    barcodes,
+    name=None,
+    log_scale=False,
+    minimum_length=0.00,
+    figsize=(12, 6),
+    line_width=3,
+):
     """
     Affiche un diagramme de codes-barres de persistance.
     barcodes : liste de tuples (dim, birth, death)
