@@ -31,7 +31,7 @@ def plot_barcodes(
     barcodes,
     name=None,
     log_scale=False,
-    minimum_length=0.05,
+    minimum_length=0.00,
     figsize=(12, 6),
     line_width=3,
 ):
