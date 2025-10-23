@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import torch
+import plotly.graph_objects as go
 
 
 # Return a sorted by time filtration from a file
@@ -147,108 +149,3 @@ def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.05):
 
     plt.tight_layout()
     plt.show()
-
-
-def plot_triangulation(data, show_labels=True, seed=42):
-    """
-    Représente un complexe simplicial :
-    - Noeuds : simplexes de dimension 0 (points)
-    - Arêtes : simplexes de dimension 1
-    - Triangles : simplexes de dimension 2 (en surface translucide)
-    """
-    vertices = []
-    edges = []
-    triangles = []
-
-    for i, s in enumerate(data):
-        if s["dim"] == 0:
-            vertices.append(next(iter(s["vert"])))
-        elif s["dim"] == 1:
-            edges.append(s["vert"])
-        elif s["dim"] == 2:
-            triangles.append(s["vert"])
-
-    # --- Construction du graphe des arêtes ---
-    G = nx.Graph()
-    G.add_nodes_from(vertices)
-    for edge in edges:
-        u, v = edge
-        G.add_edge(u, v)
-
-    # --- Layout 3D pour tout placer ---
-    pos = nx.spring_layout(G, seed=seed, dim=3)
-    node_xyz = [pos[n] for n in G.nodes]
-    x, y, z = zip(*node_xyz)
-
-    # --- Arêtes (segments) ---
-    edge_x, edge_y, edge_z = [], [], []
-    for u, v in G.edges:
-        x0, y0, z0 = pos[u]
-        x1, y1, z1 = pos[v]
-        edge_x += [x0, x1, None]
-        edge_y += [y0, y1, None]
-        edge_z += [z0, z1, None]
-
-    # --- Triangles translucides (dim=2) ---
-
-    # coordonnées des triangles
-    if triangles:
-        i_idx = [vertices.index(a) for a, b, c in triangles]
-        j_idx = [vertices.index(b) for a, b, c in triangles]
-        k_idx = [vertices.index(c) for a, b, c in triangles]
-
-        mesh = go.Mesh3d(
-            x=x,
-            y=y,
-            z=z,
-            i=i_idx,
-            j=j_idx,
-            k=k_idx,
-            color="lightblue",
-            opacity=0.3,
-            flatshading=True,
-            name="Triangles",
-        )
-    else:
-        mesh = None
-
-    # --- Traces Plotly ---
-    fig = go.Figure()
-
-    # Arêtes
-    fig.add_trace(
-        go.Scatter3d(
-            x=edge_x,
-            y=edge_y,
-            z=edge_z,
-            mode="lines",
-            line=dict(width=2, color="gray"),
-            hoverinfo="none",
-            name="Edges",
-        )
-    )
-
-    # Points
-    fig.add_trace(
-        go.Scatter3d(
-            x=x,
-            y=y,
-            z=z,
-            mode="markers+text" if show_labels else "markers",
-            marker=dict(size=6, color="blue"),
-            text=[str(n) for n in G.nodes] if show_labels else None,
-            textposition="top center",
-            name="Vertices",
-        )
-    )
-
-    # Triangles (si présents)
-    if mesh:
-        fig.add_trace(mesh)
-
-    fig.update_layout(
-        scene=dict(aspectmode="data"),
-        title="Complexe simplicial (points, arêtes et triangles)",
-    )
-
-    fig.show()
