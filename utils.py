@@ -114,7 +114,7 @@ def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.00):
                 if death == float("inf"):
                     ax.annotate(
                         "",
-                        xy=(x_max - margin * 0.05, y),
+                        xy=(x_max, y),
                         xytext=(x_max - margin * 0.2, y),
                         arrowprops=dict(
                             arrowstyle="->",
@@ -122,7 +122,7 @@ def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.00):
                             lw=2,
                             shrinkA=0,
                             shrinkB=0,
-                            mutation_scale=10,
+                            mutation_scale=20,
                         ),
                     )
 
