@@ -11,16 +11,6 @@
 
 using namespace std;
 
-// ---------- HASH FUNCTION FOR VECTOR<int> ----------
-struct VecHash {
-    size_t operator()(const vector<int>& v) const {
-        size_t h = 0;
-        for (int x : v)
-            h ^= hash<int>{}(x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-        return h;
-    }
-};
-
 // ---------- STRUCTURE ----------
 struct Simplex {
     double time;
@@ -56,6 +46,16 @@ vector<Simplex> read_filtration(const string& filename) {
     return filtration;
 }
 
+// ---------- HASH FUNCTION FOR VECTOR<int> ----------
+struct VecHash {
+    size_t operator()(const vector<int>& v) const {
+        size_t h = 0;
+        for (int x : v)
+            h ^= hash<int>{}(x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+
 // ---------- BOUNDARY MATRIX ----------
 vector<vector<int>> boundary_matrix(const vector<Simplex>& filtration) {
     unordered_map<vector<int>, int, VecHash> index_map;
@@ -67,16 +67,30 @@ vector<vector<int>> boundary_matrix(const vector<Simplex>& filtration) {
 
     for (size_t j = 0; j < filtration.size(); ++j) {
         const auto& s = filtration[j];
-        if (s.dim == 0) continue;
+        if (s.dim == 0) continue; // 0-dimensional simplex has empty boundary
         for (size_t k = 0; k < s.vert.size(); ++k) {
             vector<int> face = s.vert;
-            face.erase(face.begin() + k);
+            face.erase(face.begin() + k); // remove vertex
             auto it = index_map.find(face);
             if (it != index_map.end()) boundary[j].push_back(it->second);
         }
+        sort(boundary[j].begin(), boundary[j].end()); // ensure sorted
     }
-
     return boundary;
+}
+
+// ---------- XOR TWO SORTED VECTORS ----------
+vector<int> xor_columns(const vector<int>& a, const vector<int>& b) {
+    vector<int> res;
+    size_t i = 0, j = 0;
+    while (i < a.size() || j < b.size()) {
+        int va = (i < a.size()) ? a[i] : numeric_limits<int>::max();
+        int vb = (j < b.size()) ? b[j] : numeric_limits<int>::max();
+        if (va == vb) { ++i; ++j; }          // cancel out (mod 2)
+        else if (va < vb) { res.push_back(va); ++i; }
+        else { res.push_back(vb); ++j; }
+    }
+    return res;
 }
 
 // ---------- REDUCE BOUNDARY MATRIX ----------
@@ -87,21 +101,10 @@ vector<vector<int>> reduce_boundary_matrix(vector<vector<int>> boundary) {
     for (size_t j = 0; j < boundary.size(); ++j) {
         while (!boundary[j].empty() && pivots.count(boundary[j].back())) {
             int i = pivots[boundary[j].back()];
-            vector<int> tmp;
-            size_t p1 = 0, p2 = 0;
-            auto& col1 = boundary[j];
-            auto& col2 = boundary[i];
-            while (p1 < col1.size() || p2 < col2.size()) {
-                int val1 = (p1 < col1.size()) ? col1[p1] : numeric_limits<int>::max();
-                int val2 = (p2 < col2.size()) ? col2[p2] : numeric_limits<int>::max();
-                if (val1 == val2) { ++p1; ++p2; } // XOR: remove
-                else if (val1 < val2) { tmp.push_back(val1); ++p1; }
-                else { tmp.push_back(val2); ++p2; }
-            }
-            boundary[j] = tmp;
+            boundary[j] = xor_columns(boundary[j], boundary[i]);
         }
         if (!boundary[j].empty())
-            pivots[boundary[j].back()] = j;
+            pivots[boundary[j].back()] = static_cast<int>(j);
     }
     return boundary;
 }
