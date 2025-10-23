@@ -1,10 +1,5 @@
 import sys
 import matplotlib.pyplot as plt
-import networkx as nx
-import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-import torch
-import plotly.graph_objects as go
 
 
 # Return a sorted by time filtration from a file
@@ -31,7 +26,7 @@ def read_filtration(filename):
     return filtration
 
 
-def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.05):
+def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.00):
     """
     Affiche un diagramme de codes-barres de persistance.
     barcodes : liste de tuples (dim, birth, death)
@@ -51,17 +46,10 @@ def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.05):
     barcodes = filtered
 
     if not barcodes:
-        # Rien à afficher : afficher une figure vide avec titre
-        fig, ax = plt.subplots(figsize=(8, 3))
-        ax.set_yticks([])
-        ax.set_xticks([])
-        ax.set_title("Barcode diagram" + (f" - {name}" if name else "") + " (no bars)")
-        plt.tight_layout()
-        plt.show()
-        return
+        raise ValueError("Empty barcode list")
 
     # Dimensions distinctes
-    dims = sorted(set(dim for dim, _, _ in barcodes))
+    dims = list(range(barcodes[-1][0] + 1))
 
     # Calcul des bornes horizontales
     finite_deaths = [d for (_, _, d) in barcodes if d != float("inf")]
@@ -76,7 +64,7 @@ def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.05):
     if span == 0:
         margin = 1.0
     else:
-        margin = span * 0.05
+        margin = span * 0.1
     x_min -= margin
     x_max += margin
 
@@ -122,6 +110,21 @@ def plot_barcodes(barcodes, name=None, log_scale=False, minimum_length=0.05):
                 if log_scale and plot_end <= 0:
                     plot_end = 1e-10
                 ax.hlines(y, plot_birth, plot_end, color=color, lw=3)
+
+                if death == float("inf"):
+                    ax.annotate(
+                        "",
+                        xy=(x_max - margin * 0.05, y),
+                        xytext=(x_max - margin * 0.2, y),
+                        arrowprops=dict(
+                            arrowstyle="->",
+                            color=color,
+                            lw=2,
+                            shrinkA=0,
+                            shrinkB=0,
+                            mutation_scale=10,
+                        ),
+                    )
 
         # Label H_k au milieu du bloc
         ax.text(
